@@ -132,7 +132,7 @@ class SudokuGUI:
         undo_button.grid(row=3, column=0, columnspan=6, pady=10)
 
         # Widget Text para mostrar la tabla de Sudoku
-        self.board_text = tk.Text(self.master, height=18, width=35, font=("Courier New", 12), bg="lightgrey")
+        self.board_text = tk.Text(self.master, height=12, width=22, font=("Courier New", 12), bg="lightgrey")
         self.board_text.pack(pady=10)
 
     def load_configuration_from_file(self):
@@ -168,20 +168,28 @@ class SudokuGUI:
         # Limpiamos el contenido actual en el widget Text
         self.board_text.delete("1.0", tk.END)
         # Insertamos la tabla de Sudoku en el widget Text
-        for row in self.game.board:
-            row_text = " | ".join(map(str, row))
+        for index, row in enumerate(self.game.board):
+            row_text = " ".join(map(str, row))
             count = 0
             modified_row_text = ""
             for i, char in enumerate(row_text):
-                if char == '|':
+                if char == ' ':
                     count += 1
                     if count % 3 == 0:
-                        modified_row_text += '||'
+                        modified_row_text += ' | '
                     else:
                         modified_row_text += char
                 else:
                     modified_row_text += char
-            self.board_text.insert(tk.END, modified_row_text + "\n" + "——————————————————————————————————" + "\n")
+            
+            self.board_text.insert(tk.END, modified_row_text + "\n")
+            
+            # Reemplazar cada tercera línea por "="
+            if index + 1  == 3 or index + 1  == 6:  # Si es la tercera línea (empezando desde 1)
+                self.board_text.insert(tk.END, "----------------------\n")
+            else:
+                self.board_text.insert(tk.END, "")
+
 
 
 if __name__ == "__main__":
