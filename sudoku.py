@@ -84,6 +84,7 @@ class SudokuGame:
         for row in self.board:
             print(" ".join(map(str, row)))
 
+
     def display_history(self):
         for move in self.history:
             print(move)
@@ -131,7 +132,7 @@ class SudokuGUI:
         undo_button.grid(row=3, column=0, columnspan=6, pady=10)
 
         # Widget Text para mostrar la tabla de Sudoku
-        self.board_text = tk.Text(self.master, height=9, width=21, font=("Courier New", 12), bg="lightgrey")
+        self.board_text = tk.Text(self.master, height=18, width=35, font=("Courier New", 12), bg="lightgrey")
         self.board_text.pack(pady=10)
 
     def load_configuration_from_file(self):
@@ -168,7 +169,20 @@ class SudokuGUI:
         self.board_text.delete("1.0", tk.END)
         # Insertamos la tabla de Sudoku en el widget Text
         for row in self.game.board:
-            self.board_text.insert(tk.END, " ".join(map(str, row)) + "\n")
+            row_text = " | ".join(map(str, row))
+            count = 0
+            modified_row_text = ""
+            for i, char in enumerate(row_text):
+                if char == '|':
+                    count += 1
+                    if count % 3 == 0:
+                        modified_row_text += '||'
+                    else:
+                        modified_row_text += char
+                else:
+                    modified_row_text += char
+            self.board_text.insert(tk.END, modified_row_text + "\n" + "——————————————————————————————————" + "\n")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
