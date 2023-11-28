@@ -1,11 +1,40 @@
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
+class Stack:
+    def __init__(self):
+        self.items = []
+        self.current = -1
+
+    def is_empty(self):
+        return len(self.items) == 0
+
+    def push(self, item):
+        self.current += 1
+        self.items = self.items[:self.current]
+        self.items.append(item)
+
+    def pop(self):
+        if not self.is_empty():
+            item = self.items.pop()
+            self.current -= 1
+            return item
+        return None
+
+    def peek(self):
+        if not self.is_empty():
+            return self.items[self.current]
+        return None
+
+    def size(self):
+        return len(self.items)
+
+
 class SudokuGame:
     def __init__(self):
         self.board = [[0] * 9 for _ in range(9)]
-        self.history = []
-        self.current_move = -1  # Índice del último movimiento realizado
+        self.history = Stack()  # Usando la pila para guardar el historial de movimientos
+        self.redo_stack = Stack()  # Pila para rehacer movimientos
         self.game_over = False
 
     def load_initial_configuration(self, file_path):
@@ -16,57 +45,31 @@ class SudokuGame:
 
     def make_move(self, row, col, number):
         if not self.game_over:
+            prev_board = [row[:] for row in self.board]  # Copia del tablero antes del movimiento
             if self.is_valid_move(row, col, number):
-                # Eliminar historial futuro si se realizaron deshacer
-                if self.current_move < len(self.history) - 1:
-                    self.history = self.history[:self.current_move + 1]
-
-                prev_number = self.board[row][col]
                 self.board[row][col] = number
-                self.history.append((row, col, number, prev_number, 'New Move'))
-                self.current_move += 1
-
+                self.history.push((prev_board, (row, col), number))
+                if not self.redo_stack.is_empty():
+                    self.redo_stack = Stack()  # Limpiar la pila de rehacer al realizar un nuevo movimiento
                 if self.is_game_over():
-                    self.history.append(('Game Over',))
                     self.game_over = True
-
                 return True
         return False
 
     def undo_move(self):
-        if not self.game_over and self.current_move >= 0:
-            last_move = self.history[self.current_move]
-            if last_move[-1] == 'New Move':
-                row, col, _, prev_number, _ = last_move
-                self.board[row][col] = prev_number  # Restaurar el valor anterior
-                self.current_move -= 1
-            elif last_move[-1] == 'Redo Move':
-                # Si la jugada anterior fue un rehacer, eliminamos la jugada actual
-                self.history.pop()
-                self.current_move -= 1
-            else:
-                # Si la jugada anterior fue un deshacer, la aplicamos nuevamente
-                row, col, number, _ = last_move
-                self.board[row][col] = number
-                self.current_move -= 1
+        if not self.history.is_empty():
+            prev_board, (row, col), _ = self.history.pop()
+            self.redo_stack.push((prev_board, (row, col), self.board[row][col]))
+            self.board = prev_board
+            self.game_over = False
 
     def redo_move(self):
-        if not self.game_over and self.current_move < len(self.history) - 1:
-            next_move = self.history[self.current_move + 1]
-            if next_move[-1] == 'New Move':
-                row, col, number, _, _ = next_move
-                if self.is_valid_move(row, col, number):
-                    self.board[row][col] = number
-                    self.current_move += 1
-                    if self.is_game_over():
-                        self.history.append(('Game Over',))
-                        self.game_over = True
-                    return True
-            elif next_move[-1] == 'Redo Move':
-                # Si la próxima jugada es un rehacer, la aplicamos nuevamente
-                row, col, number, _ = next_move
-                self.board[row][col] = number
-                self.current_move += 1
+        if not self.redo_stack.is_empty():
+            prev_board, (row, col), number = self.redo_stack.pop()
+            self.board = prev_board
+            self.make_move(row, col, number)
+            return True
+        return False
 
     def suggest_move(self, row, col):
         current_number = self.board[row][col]
