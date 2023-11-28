@@ -5,6 +5,7 @@ class SudokuGame:
     def __init__(self):
         self.board = [[0] * 9 for _ in range(9)]
         self.history = []
+        self.current_move = -1  # Índice del último movimiento realizado
         self.game_over = False
 
     def load_initial_configuration(self, file_path):
@@ -16,34 +17,56 @@ class SudokuGame:
     def make_move(self, row, col, number):
         if not self.game_over:
             if self.is_valid_move(row, col, number):
+                # Eliminar historial futuro si se realizaron deshacer
+                if self.current_move < len(self.history) - 1:
+                    self.history = self.history[:self.current_move + 1]
+
+                prev_number = self.board[row][col]
                 self.board[row][col] = number
-                self.history.append((row, col, number, 'New Move'))
+                self.history.append((row, col, number, prev_number, 'New Move'))
+                self.current_move += 1
+
                 if self.is_game_over():
                     self.history.append(('Game Over',))
                     self.game_over = True
+
                 return True
         return False
 
     def undo_move(self):
-        if not self.game_over and self.history:
-            last_move = self.history.pop()
+        if not self.game_over and self.current_move >= 0:
+            last_move = self.history[self.current_move]
             if last_move[-1] == 'New Move':
-                row, col, _, _ = last_move
-                self.board[row][col] = 0
+                row, col, _, prev_number, _ = last_move
+                self.board[row][col] = prev_number  # Restaurar el valor anterior
+                self.current_move -= 1
+            elif last_move[-1] == 'Redo Move':
+                # Si la jugada anterior fue un rehacer, eliminamos la jugada actual
+                self.history.pop()
+                self.current_move -= 1
+            else:
+                # Si la jugada anterior fue un deshacer, la aplicamos nuevamente
+                row, col, number, _ = last_move
+                self.board[row][col] = number
+                self.current_move -= 1
 
     def redo_move(self):
-        if not self.game_over and self.history:
-            last_move = self.history[-1]
-            if last_move[-1] == 'New Move':
-                row, col, number, _ = last_move
+        if not self.game_over and self.current_move < len(self.history) - 1:
+            next_move = self.history[self.current_move + 1]
+            if next_move[-1] == 'New Move':
+                row, col, number, _, _ = next_move
                 if self.is_valid_move(row, col, number):
                     self.board[row][col] = number
-                    self.history.append((row, col, number, 'Redo Move'))
+                    self.current_move += 1
                     if self.is_game_over():
                         self.history.append(('Game Over',))
                         self.game_over = True
                     return True
-        return False
+            elif next_move[-1] == 'Redo Move':
+                # Si la próxima jugada es un rehacer, la aplicamos nuevamente
+                row, col, number, _ = next_move
+                self.board[row][col] = number
+                self.current_move += 1
 
     def suggest_move(self, row, col):
         current_number = self.board[row][col]
@@ -85,10 +108,6 @@ class SudokuGame:
             print(" ".join(map(str, row)))
 
 
-    def display_history(self):
-        for move in self.history:
-            print(move)
-
 class SudokuGUI:
     def __init__(self, master):
         self.master = master
@@ -120,16 +139,23 @@ class SudokuGUI:
         self.col_entry = tk.Entry(frame, width=5)
         self.col_entry.grid(row=1, column=3, padx=5)
 
-        tk.Label(frame, text="Numero:").grid(row=1, column=4, padx=5)
+        tk.Label(frame, text="Número:").grid(row=1, column=4, padx=5)
         self.num_entry = tk.Entry(frame, width=5)
         self.num_entry.grid(row=1, column=5, padx=5)
 
-        # Botones para realizar una jugada y deshacer una jugada
+        # Botones para realizar una jugada, deshacer y rehacer movimientos
         make_move_button = tk.Button(frame, text="Hacer Mov", command=self.make_move)
         make_move_button.grid(row=2, column=0, columnspan=6, pady=10)
 
-        undo_button = tk.Button(frame, text="Desh Mov", command=self.undo_move)
-        undo_button.grid(row=3, column=0, columnspan=6, pady=10)
+        undo_button = tk.Button(frame, text="Deshacer Mov", command=self.undo_move)
+        undo_button.grid(row=3, column=0, pady=10)
+
+        redo_button = tk.Button(frame, text="Rehacer Mov", command=self.redo_move)
+        redo_button.grid(row=3, column=1, pady=10)
+
+        # Botón para sugerir movimientos
+        suggest_button = tk.Button(frame, text="Sugerir Movimientos", command=self.suggest_move_for_entry)
+        suggest_button.grid(row=4, column=0, columnspan=6, pady=10)
 
         # Widget Text para mostrar la tabla de Sudoku
         self.board_text = tk.Text(self.master, height=12, width=22, font=("Courier New", 12), bg="lightgrey")
@@ -154,7 +180,7 @@ class SudokuGUI:
             return
 
         if not (1 <= row <= 9 and 1 <= col <= 9 and 1 <= number <= 9):
-            messagebox.showerror("Error", "Por favor ingrese un numero entre 1 y 9.")
+            messagebox.showerror("Error", "Por favor ingrese un número entre 1 y 9.")
             return
 
         if self.game.make_move(row - 1, col - 1, number):
@@ -163,6 +189,30 @@ class SudokuGUI:
     def undo_move(self):
         self.game.undo_move()
         self.display_board()
+
+    def redo_move(self):
+        self.game.redo_move()
+        self.display_board()
+
+    def suggest_move_for_entry(self):
+        try:
+            row = int(self.row_entry.get())
+            col = int(self.col_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Por favor ingresa números válidos para fila y columna.")
+            return
+
+        if not (1 <= row <= 9 and 1 <= col <= 9):
+            messagebox.showerror("Error", "Por favor ingrese números entre 1 y 9 para fila y columna.")
+            return
+
+        suggestions = self.game.suggest_move(row - 1, col - 1)
+
+        # Manejar el caso de 'Game Over' en el historial
+        if suggestions != ['Game Over']:
+            messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
+        else:
+            messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
 
     def display_board(self):
         # Limpiamos el contenido actual en el widget Text
@@ -190,11 +240,7 @@ class SudokuGUI:
             else:
                 self.board_text.insert(tk.END, "")
 
-
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = SudokuGUI(root)
     root.mainloop()
-
-
