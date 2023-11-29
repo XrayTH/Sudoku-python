@@ -198,24 +198,29 @@ class SudokuGUI:
         self.display_board()
 
     def suggest_move_for_entry(self):
-        try:
-            row = int(self.row_entry.get())
-            col = int(self.col_entry.get())
-        except ValueError:
-            messagebox.showerror("Error", "Por favor ingresa números válidos para fila y columna.")
-            return
+            try:
+                row = int(self.row_entry.get())
+                col = int(self.col_entry.get())
+            except ValueError:
+                messagebox.showerror("Error", "Por favor ingresa números válidos para fila y columna.")
+                return
 
-        if not (1 <= row <= 9 and 1 <= col <= 9):
-            messagebox.showerror("Error", "Por favor ingrese números entre 1 y 9 para fila y columna.")
-            return
+            if not (1 <= row <= 9 and 1 <= col <= 9):
+                messagebox.showerror("Error", "Por favor ingrese números entre 1 y 9 para fila y columna.")
+                return
 
-        suggestions = self.game.suggest_move(row - 1, col - 1)
+            current_number = self.game.board[row - 1][col - 1]
 
-        # Manejar el caso de 'Game Over' en el historial
-        if suggestions != ['Game Over']:
-            messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
-        else:
-            messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
+            if current_number != 0:
+                messagebox.showerror("Error", "Esa casilla ya tiene un número.")
+                return
+
+            suggestions = self.game.suggest_move(row - 1, col - 1)
+
+            if suggestions != ['Game Over']:
+                messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
+            else:
+                messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
 
     def display_board(self):
         # Limpiamos el contenido actual en el widget Text
