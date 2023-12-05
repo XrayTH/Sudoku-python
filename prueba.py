@@ -221,6 +221,10 @@ class SudokuGUI:
         file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
         if file_path:
             try:
+                # Cerrar la ventana del historial si está abierta
+                if self.history_window and self.history_window.winfo_exists():
+                    self.history_window.destroy()
+
                 # Limpiar historial al cargar una nueva configuración
                 self.game.history = Stack()
                 self.game.redo_moves = Stack()
