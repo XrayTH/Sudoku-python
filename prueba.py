@@ -221,10 +221,16 @@ class SudokuGUI:
         file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
         if file_path:
             try:
+                # Limpiar historial al cargar una nueva configuración
+                self.game.history = Stack()
+                self.game.redo_moves = Stack()
+                self.game.full_history = LinkedList()
+
                 self.game.load_initial_configuration(file_path)
                 self.display_board()
             except Exception as e:
                 messagebox.showerror("Error", f"Error al cargar la configuración: {e}")
+
 
     def update_history(self):
         if self.history_window and self.history_window.winfo_exists():
