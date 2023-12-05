@@ -40,7 +40,39 @@ class Stack:
     def size(self):
         return len(self.items)
 
+class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
 
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def is_empty(self):
+        return self.head is None
+
+    def append(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            return
+        current = self.head
+        while current.next:
+            current = current.next
+        current.next = new_node
+
+    def display(self):
+        current = self.head
+        while current:
+            print(current.data)
+            current = current.next
+            
+    def __iter__(self):
+        current = self.head
+        while current:
+            yield current.data
+            current = current.next
 
 class SudokuGame:
     def __init__(self):
@@ -48,7 +80,7 @@ class SudokuGame:
         self.history = Stack()  # Pila para el historial de movimientos
         self.game_over = False
         self.redo_moves = Stack()  # Pila para rehacer movimientos
-        self.full_history = []  # Lista para guardar todos los movimientos
+        self.full_history = LinkedList()  # Usar la nueva lista enlazada en lugar de una lista simple
 
     def load_initial_configuration(self, file_path):
         with open(file_path, 'r') as file:
