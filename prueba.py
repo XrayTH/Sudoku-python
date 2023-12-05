@@ -194,6 +194,10 @@ class SudokuGUI:
             except Exception as e:
                 messagebox.showerror("Error", f"Error al cargar la configuración: {e}")
 
+    def update_history(self):
+        if self.history_window and self.history_window.winfo_exists():
+            self.show_history()
+
     def make_move(self):
         try:
             row = int(self.row_entry.get())
@@ -209,14 +213,17 @@ class SudokuGUI:
 
         if self.game.make_move(row - 1, col - 1, number):
             self.display_board()
+            self.update_history()
 
     def undo_move(self):
         self.game.undo_move()
         self.display_board()
+        self.update_history()
 
     def redo_move(self):
         self.game.redo_move()
         self.display_board()
+        self.update_history()
 
     def suggest_move_for_entry(self):
         try:
