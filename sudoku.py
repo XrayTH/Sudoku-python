@@ -123,7 +123,13 @@ class SudokuGame:
         current_number = self.board[row][col]
         suggestions = [num for num in range(1, 10) if self.is_valid_move(row, col, num)]
         suggestions.remove(current_number) if current_number != 0 else suggestions
+
+        # Filtrar las sugerencias que estén en redo_moves
+        redo_moves_set = {(move[1][0], move[1][1], move[2]) for move in self.redo_moves.items}
+        suggestions = [suggestion for suggestion in suggestions if (row, col, suggestion) not in redo_moves_set]
+
         return suggestions
+
 
     def is_valid_move(self, row, col, number):
         return (
