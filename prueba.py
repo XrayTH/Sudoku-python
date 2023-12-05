@@ -131,6 +131,7 @@ class SudokuGUI:
     def __init__(self, master):
         self.master = master
         self.master.title("Sudoku")
+        self.history_window = None  # Ventana para el historial de jugadas
 
         self.create_widgets()
 
@@ -243,24 +244,28 @@ class SudokuGUI:
             messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
 
     def show_history(self):
-        history_window = tk.Toplevel(self.master)
-        history_window.title("Historial de Jugadas")
-
-        history_text = tk.Text(history_window, height=20, width=50, font=("Courier New", 12), bg="lightgrey")
-        history_text.pack(pady=10)
+        if self.history_window is None or not self.history_window.winfo_exists():
+            self.history_window = tk.Toplevel(self.master)
+            self.history_window.title("Historial de Jugadas")
+            self.history_text = tk.Text(self.history_window, height=20, width=50, font=("Courier New", 12), bg="lightgrey")
+            self.history_text.pack(pady=10)
+        else:
+            self.history_text.delete('1.0', tk.END)
 
         for move in self.game.full_history:
-            if len(move) == 4:  # Verificar si hay cuatro elementos en el movimiento
+            if len(move) == 4:
                 move_type, prev_board, (row, col), number = move
                 if move_type == 'undo':
-                    history_text.insert(tk.END, f"Jugada deshecha: ({row + 1}, {col + 1}) = {number}\n")
+                    self.history_text.insert(tk.END, f"Jugada deshecha: ({row + 1}, {col + 1}) = {number}\n")
                 elif move_type == 'redo':
-                    history_text.insert(tk.END, f"Jugada rehecha: ({row + 1}, {col + 1}) = {number}\n")
+                    self.history_text.insert(tk.END, f"Jugada rehecha: ({row + 1}, {col + 1}) = {number}\n")
                 else:
-                    history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
+                    self.history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
             else:
                 prev_board, (row, col), number = move
-                history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
+                self.history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
+
+        self.history_window.lift()
 
 
 
