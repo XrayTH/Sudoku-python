@@ -5,6 +5,7 @@ class Stack:
     def __init__(self):
         self.items = []
         self.current = -1
+        self.redo_items = []
 
     def is_empty(self):
         return len(self.items) == 0
@@ -13,11 +14,21 @@ class Stack:
         self.current += 1
         self.items = self.items[:self.current]
         self.items.append(item)
+        self.redo_items = []
 
     def pop(self):
         if not self.is_empty():
             item = self.items.pop()
             self.current -= 1
+            self.redo_items.append(item)
+            return item
+        return None
+
+    def redo(self):
+        if self.redo_items:
+            item = self.redo_items.pop()
+            self.items.append(item)
+            self.current += 1
             return item
         return None
 
@@ -29,13 +40,47 @@ class Stack:
     def size(self):
         return len(self.items)
 
+class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def is_empty(self):
+        return self.head is None
+
+    def append(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            return
+        current = self.head
+        while current.next:
+            current = current.next
+        current.next = new_node
+
+    def display(self):
+        current = self.head
+        while current:
+            print(current.data)
+            current = current.next
+            
+    def __iter__(self):
+        current = self.head
+        while current:
+            yield current.data
+            current = current.next
 
 class SudokuGame:
     def __init__(self):
         self.board = [[0] * 9 for _ in range(9)]
-        self.history = Stack()  # Usando la pila para guardar el historial de movimientos
-        self.redo_stack = Stack()  # Pila para rehacer movimientos
+        self.history = Stack()  # Pila para el historial de movimientos
         self.game_over = False
+        self.redo_moves = Stack()  # Pila para rehacer movimientos
+        self.full_history = LinkedList()  # Usar la nueva lista enlazada en lugar de una lista simple
 
     def load_initial_configuration(self, file_path):
         with open(file_path, 'r') as file:
@@ -49,8 +94,7 @@ class SudokuGame:
             if self.is_valid_move(row, col, number):
                 self.board[row][col] = number
                 self.history.push((prev_board, (row, col), number))
-                if not self.redo_stack.is_empty():
-                    self.redo_stack = Stack()  # Limpiar la pila de rehacer al realizar un nuevo movimiento
+                self.full_history.append((prev_board, (row, col), number))  # Agregar movimiento al historial completo
                 if self.is_game_over():
                     self.game_over = True
                 return True
@@ -58,18 +102,22 @@ class SudokuGame:
 
     def undo_move(self):
         if not self.history.is_empty():
-            prev_board, (row, col), _ = self.history.pop()
-            self.redo_stack.push((prev_board, (row, col), self.board[row][col]))
+            prev_board, (row, col), number = self.history.pop()
+            self.redo_moves.push((prev_board, (row, col), number))
             self.board = prev_board
             self.game_over = False
+            self.full_history.append(('undo', prev_board, (row, col), number))  # Agregar movimiento deshecho al historial completo
 
     def redo_move(self):
-        if not self.redo_stack.is_empty():
-            prev_board, (row, col), number = self.redo_stack.pop()
-            self.board = prev_board
+        if not self.redo_moves.is_empty():
+            prev_board, (row, col), number = self.redo_moves.pop()
+            self.history.push((prev_board, (row, col), number))
             self.make_move(row, col, number)
+            self.full_history.append(('redo', prev_board, (row, col), number))  # Agregar movimiento rehecho al historial completo
             return True
         return False
+
+
 
     def suggest_move(self, row, col):
         current_number = self.board[row][col]
@@ -110,11 +158,11 @@ class SudokuGame:
         for row in self.board:
             print(" ".join(map(str, row)))
 
-
 class SudokuGUI:
     def __init__(self, master):
         self.master = master
         self.master.title("Sudoku")
+        self.history_window = None  # Ventana para el historial de jugadas
 
         self.create_widgets()
 
@@ -160,6 +208,10 @@ class SudokuGUI:
         suggest_button = tk.Button(frame, text="Sugerir Movimientos", command=self.suggest_move_for_entry)
         suggest_button.grid(row=4, column=0, columnspan=6, pady=10)
 
+        # Botón para mostrar el historial de jugadas
+        history_button = tk.Button(frame, text="Historial de Jugadas", command=self.show_history)
+        history_button.grid(row=5, column=0, columnspan=6, pady=10)
+
         # Widget Text para mostrar la tabla de Sudoku
         self.board_text = tk.Text(self.master, height=12, width=22, font=("Courier New", 12), bg="lightgrey")
         self.board_text.pack(pady=10)
@@ -168,10 +220,24 @@ class SudokuGUI:
         file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
         if file_path:
             try:
+                # Cerrar la ventana del historial si está abierta
+                if self.history_window and self.history_window.winfo_exists():
+                    self.history_window.destroy()
+
+                # Limpiar historial al cargar una nueva configuración
+                self.game.history = Stack()
+                self.game.redo_moves = Stack()
+                self.game.full_history = LinkedList()
+
                 self.game.load_initial_configuration(file_path)
                 self.display_board()
             except Exception as e:
                 messagebox.showerror("Error", f"Error al cargar la configuración: {e}")
+
+
+    def update_history(self):
+        if self.history_window and self.history_window.winfo_exists():
+            self.show_history()
 
     def make_move(self):
         try:
@@ -188,39 +254,68 @@ class SudokuGUI:
 
         if self.game.make_move(row - 1, col - 1, number):
             self.display_board()
+            self.update_history()
 
     def undo_move(self):
         self.game.undo_move()
         self.display_board()
+        self.update_history()
 
     def redo_move(self):
         self.game.redo_move()
         self.display_board()
+        self.update_history()
 
     def suggest_move_for_entry(self):
-            try:
-                row = int(self.row_entry.get())
-                col = int(self.col_entry.get())
-            except ValueError:
-                messagebox.showerror("Error", "Por favor ingresa números válidos para fila y columna.")
-                return
+        try:
+            row = int(self.row_entry.get())
+            col = int(self.col_entry.get())
+        except ValueError:
+            messagebox.showerror("Error", "Por favor ingresa números válidos para fila y columna.")
+            return
 
-            if not (1 <= row <= 9 and 1 <= col <= 9):
-                messagebox.showerror("Error", "Por favor ingrese números entre 1 y 9 para fila y columna.")
-                return
+        if not (1 <= row <= 9 and 1 <= col <= 9):
+            messagebox.showerror("Error", "Por favor ingrese números entre 1 y 9 para fila y columna.")
+            return
 
-            current_number = self.game.board[row - 1][col - 1]
+        current_number = self.game.board[row - 1][col - 1]
 
-            if current_number != 0:
-                messagebox.showerror("Error", "Esa casilla ya tiene un número.")
-                return
+        if current_number != 0:
+            messagebox.showerror("Error", "Esa casilla ya tiene un número.")
+            return
 
-            suggestions = self.game.suggest_move(row - 1, col - 1)
+        suggestions = self.game.suggest_move(row - 1, col - 1)
 
-            if suggestions != ['Game Over']:
-                messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
+        if suggestions != ['Game Over']:
+            messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
+        else:
+            messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
+
+    def show_history(self):
+        if self.history_window is None or not self.history_window.winfo_exists():
+            self.history_window = tk.Toplevel(self.master)
+            self.history_window.title("Historial de Jugadas")
+            self.history_text = tk.Text(self.history_window, height=20, width=50, font=("Courier New", 12), bg="lightgrey")
+            self.history_text.pack(pady=10)
+        else:
+            self.history_text.delete('1.0', tk.END)
+
+        for move in self.game.full_history:
+            if len(move) == 4:
+                move_type, prev_board, (row, col), number = move
+                if move_type == 'undo':
+                    self.history_text.insert(tk.END, f"Jugada deshecha: ({row + 1}, {col + 1}) = {number}\n")
+                elif move_type == 'redo':
+                    self.history_text.insert(tk.END, f"Jugada rehecha: ({row + 1}, {col + 1}) = {number}\n")
+                else:
+                    self.history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
             else:
-                messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
+                prev_board, (row, col), number = move
+                self.history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
+
+        self.history_window.lift()
+
+
 
     def display_board(self):
         # Limpiamos el contenido actual en el widget Text
