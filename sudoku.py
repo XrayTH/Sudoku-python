@@ -221,6 +221,9 @@ class SudokuGUI:
         # Widget Text para mostrar la tabla de Sudoku
         self.board_text = tk.Text(self.master, height=12, width=22, font=("Courier New", 12), bg="lightgrey")
         self.board_text.pack(pady=10)
+        self.board_text.bind("<Key>", lambda e: "break")  # Deshabilita la entrada de teclado
+
+
 
     def load_configuration_from_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
@@ -303,6 +306,8 @@ class SudokuGUI:
             self.history_window.title("Historial de Jugadas")
             self.history_text = tk.Text(self.history_window, height=20, width=50, font=("Courier New", 12), bg="lightgrey")
             self.history_text.pack(pady=10)
+            self.history_text.bind("<Key>", lambda e: "break")  # Deshabilita la entrada de teclado
+            
         else:
             self.history_text.delete('1.0', tk.END)
 
