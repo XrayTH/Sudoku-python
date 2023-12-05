@@ -5,6 +5,7 @@ class Stack:
     def __init__(self):
         self.items = []
         self.current = -1
+        self.redo_items = []
 
     def is_empty(self):
         return len(self.items) == 0
@@ -13,11 +14,21 @@ class Stack:
         self.current += 1
         self.items = self.items[:self.current]
         self.items.append(item)
+        self.redo_items = []
 
     def pop(self):
         if not self.is_empty():
             item = self.items.pop()
             self.current -= 1
+            self.redo_items.append(item)
+            return item
+        return None
+
+    def redo(self):
+        if self.redo_items:
+            item = self.redo_items.pop()
+            self.items.append(item)
+            self.current += 1
             return item
         return None
 
@@ -30,12 +41,13 @@ class Stack:
         return len(self.items)
 
 
+
 class SudokuGame:
     def __init__(self):
         self.board = [[0] * 9 for _ in range(9)]
-        self.history = Stack()  # Usando la pila para guardar el historial de movimientos
-        self.redo_stack = Stack()  # Pila para rehacer movimientos
+        self.history = Stack()  # Pila para el historial de movimientos
         self.game_over = False
+        self.redo_moves = Stack()  # Pila para rehacer movimientos
 
     def load_initial_configuration(self, file_path):
         with open(file_path, 'r') as file:
@@ -48,29 +60,31 @@ class SudokuGame:
             prev_board = [row[:] for row in self.board]  # Copia del tablero antes del movimiento
             if self.is_valid_move(row, col, number):
                 self.board[row][col] = number
-                self.history.push((prev_board, (row, col), number, "Hecho"))
-                if not self.redo_stack.is_empty():
-                    self.redo_stack = Stack()  # Limpiar la pila de rehacer al realizar un nuevo movimiento
+                self.history.push((prev_board, (row, col), number))
+                # No reinicies la pila redo_moves al hacer un nuevo movimiento
+                # self.redo_moves = Stack()  # Elimina esta línea
                 if self.is_game_over():
                     self.game_over = True
                 return True
         return False
 
+
     def undo_move(self):
         if not self.history.is_empty():
-            prev_board, (row, col), number, move_type = self.history.pop()
-            self.redo_stack.push((prev_board, (row, col), number, "Deshacer"))
+            prev_board, (row, col), number = self.history.pop()
+            self.redo_moves.push((prev_board, (row, col), number))  # Movimiento al redo_stack para posible rehacer
             self.board = prev_board
             self.game_over = False
 
     def redo_move(self):
-        if not self.redo_stack.is_empty():
-            prev_board, (row, col), number, move_type = self.redo_stack.pop()
-            self.board = prev_board
+        if not self.redo_moves.is_empty():
+            prev_board, (row, col), number = self.redo_moves.pop()
+            self.history.push((prev_board, (row, col), number))  # Movimiento al history_stack para posible deshacer
             self.make_move(row, col, number)
-            self.history.push((prev_board, (row, col), number, "Rehacer"))
             return True
         return False
+
+
 
     def suggest_move(self, row, col):
         current_number = self.board[row][col]
@@ -235,18 +249,19 @@ class SudokuGUI:
         history_text.pack(pady=10)
 
         for move in self.game.history.items:
-            prev_board, (row, col), number, move_type = move
-            history_text.insert(tk.END, f"{move_type}: ({row + 1}, {col + 1}) = {number}\n")
+            prev_board, (row, col), number = move
+            history_text.insert(tk.END, f"Deshacer: ({row + 1}, {col + 1}) = {number}\n")
 
-        for move in self.game.redo_stack.items:
-            prev_board, (row, col), number, move_type = move
-            history_text.insert(tk.END, f"{move_type}: ({row + 1}, {col + 1}) = {number}\n")
+        for move in self.game.redo_moves.items:
+            prev_board, (row, col), number = move
+            history_text.insert(tk.END, f"Rehacer: ({row + 1}, {col + 1}) = {number}\n")
 
         suggestions = self.game.suggest_move(int(self.row_entry.get()) - 1, int(self.col_entry.get()) - 1)
         if suggestions != ['Game Over']:
             history_text.insert(tk.END, f"Sugerencias para la casilla ({self.row_entry.get()}, {self.col_entry.get()}): {suggestions}\n")
         else:
             history_text.insert(tk.END, "¡El juego ha terminado!\n")
+
 
     def display_board(self):
         # Limpiamos el contenido actual en el widget Text
