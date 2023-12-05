@@ -111,13 +111,11 @@ class SudokuGame:
     def redo_move(self):
         if not self.redo_moves.is_empty():
             prev_board, (row, col), number = self.redo_moves.pop()
-            self.history.push((prev_board, (row, col), number))
             self.make_move(row, col, number)
-            self.full_history.append(('redo', prev_board, (row, col), number))  # Agregar movimiento rehecho al historial completo
+            # No se agrega el movimiento rehecho al historial completo,
+            # simplemente se marca como realizada la jugada rehecha.
             return True
         return False
-
-
 
     def suggest_move(self, row, col):
         current_number = self.board[row][col]
@@ -296,9 +294,13 @@ class SudokuGUI:
         suggestions = self.game.suggest_move(row - 1, col - 1)
 
         if suggestions != ['Game Over']:
-            messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
+            if suggestions:
+                messagebox.showinfo("Sugerencias", f"Sugerencias para la casilla ({row}, {col}): {suggestions}")
+            else:
+                messagebox.showinfo("Sin sugerencias", "No hay sugerencias para esa casilla.")
         else:
             messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
+
 
     def show_history(self):
         if self.history_window is None or not self.history_window.winfo_exists():
@@ -358,3 +360,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = SudokuGUI(root)
     root.mainloop()
+
