@@ -79,11 +79,9 @@ class SudokuGame:
 
     def is_game_over(self):
         for i in range(9):
-            if not (self.is_valid_row(i, 0) and
-                    self.is_valid_col(0, i) and
-                    self.is_valid_region(i // 3 * 3, (i % 3) * 3, 0)):
-                return False
-        return True
+           if self.is_valid_move(i, i, 0):
+               return True
+           else: return False
 
     def display_board(self):
         for row in self.board:

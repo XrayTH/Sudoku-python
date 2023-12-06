@@ -101,6 +101,8 @@ class SudokuGUI:
         if self.game.make_move(row - 1, col - 1, number):
             self.display_board()
             self.update_history()
+            if(self.game.is_game_over()):
+                messagebox.showinfo("Fin del Juego", "¡El juego ha terminado!")
 
     def undo_move(self):
         self.game.undo_move()
