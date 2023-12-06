@@ -25,9 +25,31 @@ class LinkedList:
         while current:
             print(current.data)
             current = current.next
-            
-    def __iter__(self):
+
+    def delete(self, data):
         current = self.head
-        while current:
-            yield current.data
-            current = current.next
+        previous = None
+        found = False
+        while current and not found:
+            if current.data == data:
+                found = True
+            else:
+                previous = current
+                current = current.next
+        if current is None:
+            raise ValueError("No se encontro.")
+        if previous is None:
+            self.head = current.next
+        else:
+            previous.next = current.next
+
+    def search(self, x):
+        current = self.head
+        found = False
+        while current and not found:
+            if current.data == x:
+                found = True
+            else:
+                current = current.next
+        return found
+

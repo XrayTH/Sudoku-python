@@ -63,8 +63,6 @@ class SudokuGUI:
         self.board_text.pack(pady=10)
         self.board_text.bind("<Key>", lambda e: "break")  # Deshabilita la entrada de teclado
 
-
-
     def load_configuration_from_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt")])
         if file_path:
@@ -82,7 +80,6 @@ class SudokuGUI:
                 self.display_board()
             except Exception as e:
                 messagebox.showerror("Error", f"Error al cargar la configuración: {e}")
-
 
     def update_history(self):
         if self.history_window and self.history_window.winfo_exists():
@@ -168,8 +165,6 @@ class SudokuGUI:
                 self.history_text.insert(tk.END, f"Jugada hecha: ({row + 1}, {col + 1}) = {number}\n")
 
         self.history_window.lift()
-
-
 
     def display_board(self):
         # Limpiamos el contenido actual en el widget Text
