@@ -37,7 +37,7 @@ class LinkedList:
                 previous = current
                 current = current.next
         if current is None:
-            raise ValueError("No se encontro.")
+            raise ValueError("Data not found in the list")
         if previous is None:
             self.head = current.next
         else:
@@ -53,3 +53,8 @@ class LinkedList:
                 current = current.next
         return found
 
+    def __iter__(self):
+        current = self.head
+        while current:
+            yield current.data
+            current = current.next
